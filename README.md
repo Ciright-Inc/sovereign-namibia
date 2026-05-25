@@ -51,7 +51,7 @@ Seeded admin: `admin@sovereignnamibia.com` / `admin12345`
 ## Architecture
 
 - **Next.js 16** App Router with subdomain middleware
-- **PostgreSQL** with encrypted sensitive fields (`pgcrypto`, AES-256-GCM)
+- **PostgreSQL** with encrypted sensitive fields (AES-256-GCM)
 - **KEYRA theme** tokens — warm institutional Namibia palette
 - **Demo mode** when `DATABASE_URL` is unavailable
 
