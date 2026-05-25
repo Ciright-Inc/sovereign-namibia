@@ -7,11 +7,16 @@ export function getPoolConfig(): pg.PoolConfig {
   if (!connectionString) {
     throw new Error("DATABASE_URL is not configured");
   }
+  const needsSsl =
+    process.env.PGSSLMODE === "require" ||
+    Boolean(process.env.RAILWAY_ENVIRONMENT) ||
+    /sslmode=require/i.test(connectionString) ||
+    /\.railway\.app|\.rlwy\.net/i.test(connectionString);
   return {
     connectionString,
     max: 10,
     idleTimeoutMillis: 30_000,
-    ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: true } : undefined,
+    ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
   };
 }
 

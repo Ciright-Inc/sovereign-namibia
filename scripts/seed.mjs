@@ -52,6 +52,18 @@ function hashPassword(password) {
   return `${salt}:${hash}`;
 }
 
+function getPgConfig(connectionString) {
+  const needsSsl =
+    process.env.PGSSLMODE === "require" ||
+    Boolean(process.env.RAILWAY_ENVIRONMENT) ||
+    /sslmode=require/i.test(connectionString) ||
+    /\.railway\.app|\.rlwy\.net/i.test(connectionString);
+  return {
+    connectionString,
+    ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
+  };
+}
+
 async function main() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
@@ -59,7 +71,7 @@ async function main() {
     process.exit(1);
   }
 
-  const client = new pg.Client({ connectionString });
+  const client = new pg.Client(getPgConfig(connectionString));
   await client.connect();
 
   try {
