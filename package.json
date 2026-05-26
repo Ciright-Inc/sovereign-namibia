@@ -8,7 +8,8 @@
     "start": "next start -p ${PORT:-3000}",
     "lint": "eslint",
     "db:migrate": "node --env-file=.env scripts/migrate.mjs",
-    "db:seed": "node --env-file=.env scripts/seed.mjs"
+    "db:seed": "node --env-file=.env scripts/seed.mjs",
+    "db:deploy": "node scripts/migrate.mjs && node scripts/seed.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

@@ -138,6 +138,29 @@ function getPgConfig(connectionString) {
   };
 }
 
+async function waitAndConnect(connectionString) {
+  const maxRetries = Number(process.env.DB_MIGRATE_MAX_RETRIES ?? 30);
+  const delayMs = Number(process.env.DB_MIGRATE_RETRY_MS ?? 2000);
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const client = new pg.Client(getPgConfig(connectionString));
+    try {
+      await client.connect();
+      await client.query("SELECT 1");
+      return client;
+    } catch (err) {
+      try {
+        await client.end();
+      } catch {
+        /* ignore */
+      }
+      if (attempt === maxRetries) throw err;
+      console.log(`[seed] Database not ready (${attempt}/${maxRetries}), retrying…`);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  throw new Error("Unable to connect to database");
+}
+
 async function main() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
@@ -145,8 +168,7 @@ async function main() {
     process.exit(1);
   }
 
-  const client = new pg.Client(getPgConfig(connectionString));
-  await client.connect();
+  const client = await waitAndConnect(connectionString);
 
   try {
     const roles = [
@@ -175,15 +197,20 @@ async function main() {
 
     if (roleId) {
       const adminEmail = getAdminEmail();
+      const updateAdmin = process.env.SEED_UPDATE_ADMIN === "true";
       await client.query(
-        `INSERT INTO sn_admin_users (email, password_hash, full_name, role_id, must_reset_password)
-         VALUES ($1, $2, $3, $4, TRUE)
-         ON CONFLICT (email) DO UPDATE SET
-           password_hash = EXCLUDED.password_hash,
-           must_reset_password = TRUE`,
+        updateAdmin
+          ? `INSERT INTO sn_admin_users (email, password_hash, full_name, role_id, must_reset_password)
+             VALUES ($1, $2, $3, $4, TRUE)
+             ON CONFLICT (email) DO UPDATE SET
+               password_hash = EXCLUDED.password_hash,
+               must_reset_password = TRUE`
+          : `INSERT INTO sn_admin_users (email, password_hash, full_name, role_id, must_reset_password)
+             VALUES ($1, $2, $3, $4, TRUE)
+             ON CONFLICT (email) DO NOTHING`,
         [adminEmail, hashPassword("Namibia2026!"), "System Administrator", roleId]
       );
-      console.log(`Admin seeded: ${adminEmail} (must reset password on first login)`);
+      console.log(`Admin seeded: ${adminEmail}${updateAdmin ? " (password refreshed)" : ""}`);
     }
 
     for (const record of REGISTRY_SEED) {

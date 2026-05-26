@@ -38,6 +38,8 @@ Set `NEXT_PUBLIC_*` before build; redeploy after changing them.
 
 **From GitHub:** push to `main` (after repo is connected).
 
+Each deploy automatically runs **migrations** then **seed** via `scripts/docker-entrypoint.sh` before the app starts. Set `SKIP_DB_MIGRATE=true` or `SKIP_DB_SEED=true` to disable.
+
 **From CLI:**
 
 ```bash
@@ -54,7 +56,11 @@ curl https://YOUR-DOMAIN.up.railway.app/api/health
 
 Generate a public domain: service **Settings** → **Networking** → **Generate Domain**.
 
-## Admin login (after seed)
+## Admin login (auto-seeded on deploy)
 
-- Email: `admin@sovereignnamibia.com`
-- Password: `admin12345` (change in production)
+On first deploy, seed creates the Super Admin account:
+
+- Email: `admin@YOUR-DOMAIN` (derived from `NEXT_PUBLIC_APP_URL`, or `admin@sovereignnamibia.com` for localhost)
+- Password: `Namibia2026!` (bcrypt hashed; change on first login via forced reset)
+
+Redeploys skip existing admin credentials. Set `SEED_UPDATE_ADMIN=true` to refresh the default password.

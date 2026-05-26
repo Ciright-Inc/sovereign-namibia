@@ -39,6 +39,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/postgres-date ./node
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/postgres-interval ./node_modules/postgres-interval
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/split2 ./node_modules/split2
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/xtend ./node_modules/xtend
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/bcryptjs ./node_modules/bcryptjs
 
 RUN chmod +x ./docker-entrypoint.sh
 
