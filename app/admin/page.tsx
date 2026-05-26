@@ -24,6 +24,11 @@ export default function AdminLoginPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Login failed");
+
+      if (data.mustResetPassword) {
+        window.location.href = "/admin/reset-password";
+        return;
+      }
       window.location.href = "/admin/dashboard";
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Login failed");
@@ -33,30 +38,43 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0c1a2e] px-6">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur">
-        <p className="text-xs uppercase tracking-widest text-white/50">Administration</p>
-        <h1 className="mt-2 text-2xl font-semibold text-white">admin.sovereignnamibia.com</h1>
-        <p className="mt-2 text-sm text-white/60">Authorized personnel only. MFA required.</p>
+    <div className="flex min-h-screen items-center justify-center bg-[#050608] px-6">
+      <div className="w-full max-w-md rounded-xl border border-white/10 bg-[#0a0c0f] p-8 shadow-2xl">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-[#6b7280]">Sovereign Registry</p>
+        <h1 className="mt-2 text-2xl font-semibold text-white">Admin Login</h1>
+        <p className="mt-2 text-sm text-[#9ca3af]">
+          Authorized personnel only. All access is audited and rate-limited.
+        </p>
 
         <form onSubmit={handleLogin} className="mt-8 space-y-4">
           <Input
-            label="Email"
+            label="Username / Email"
             name="email"
             type="email"
             required
-            className="bg-white/10 text-white border-white/20"
+            autoComplete="username"
+            className="border-white/15 bg-white/5 text-white placeholder:text-white/40"
           />
           <Input
             label="Password"
             name="password"
             type="password"
             required
-            className="bg-white/10 text-white border-white/20"
+            autoComplete="current-password"
+            className="border-white/15 bg-white/5 text-white placeholder:text-white/40"
           />
-          <Button type="submit" className="w-full" disabled={loading}>
-            Sign In
-          </Button>
+          <div className="flex flex-col gap-3 pt-2">
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Authenticating…" : "Login"}
+            </Button>
+            <button
+              type="button"
+              className="text-sm text-[#9ca3af] transition hover:text-white"
+              onClick={() => toast.info("Contact your Super Admin to reset credentials.")}
+            >
+              Forgot Password
+            </button>
+          </div>
         </form>
       </div>
     </div>

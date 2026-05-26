@@ -345,3 +345,268 @@ CREATE TABLE IF NOT EXISTS sn_rate_limits (
 );
 
 CREATE INDEX IF NOT EXISTS idx_sn_rate_limits_lookup ON sn_rate_limits(identifier, action, window_start);
+
+-- ─── Account Access & Pending Verification (v2) ─────────────────────────────
+
+ALTER TABLE sn_users ADD COLUMN IF NOT EXISTS account_type VARCHAR(64);
+
+CREATE TABLE IF NOT EXISTS sn_auth_otp_challenges (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mobile_hash VARCHAR(64) NOT NULL,
+  otp_code_hash VARCHAR(128),
+  otp_expires_at TIMESTAMPTZ,
+  otp_attempts INT NOT NULL DEFAULT 0,
+  verified BOOLEAN NOT NULL DEFAULT FALSE,
+  user_id UUID REFERENCES sn_users(id) ON DELETE SET NULL,
+  ip_address INET,
+  device_fingerprint TEXT,
+  purpose VARCHAR(32) NOT NULL DEFAULT 'account_access',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sn_auth_otp_mobile ON sn_auth_otp_challenges(mobile_hash, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS sn_pending_verifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES sn_users(id) ON DELETE SET NULL,
+  account_type VARCHAR(64) NOT NULL,
+  verification_status VARCHAR(32) NOT NULL DEFAULT 'Pending',
+  review_status VARCHAR(32) NOT NULL DEFAULT 'Unreviewed',
+  submitted_data_encrypted BYTEA NOT NULL,
+  mobile_hash VARCHAR(64),
+  ip_address INET,
+  device_fingerprint TEXT,
+  search_criteria JSONB DEFAULT '{}'::jsonb,
+  flag_reason VARCHAR(128),
+  reviewer_id UUID REFERENCES sn_admin_users(id),
+  review_notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sn_pending_verification_status ON sn_pending_verifications(verification_status, review_status);
+
+CREATE TABLE IF NOT EXISTS sn_security_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_type VARCHAR(64) NOT NULL,
+  mobile_hash VARCHAR(64),
+  ip_address INET,
+  country_code VARCHAR(2),
+  device_fingerprint TEXT,
+  metadata JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sn_security_events_type ON sn_security_events(event_type, created_at DESC);
+
+-- ─── KEYRA Trust Architecture ─────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS keyra_objects (
+  id VARCHAR(128) PRIMARY KEY,
+  parent_object_id VARCHAR(128),
+  object_type VARCHAR(64) NOT NULL,
+  object_name VARCHAR(255) NOT NULL,
+  country_code VARCHAR(2) NOT NULL,
+  domain VARCHAR(255),
+  environment VARCHAR(32) NOT NULL DEFAULT 'production',
+  status VARCHAR(32) NOT NULL DEFAULT 'active',
+  verification_status VARCHAR(32) NOT NULL DEFAULT 'verified',
+  canonical_path VARCHAR(512) NOT NULL,
+  metadata_json JSONB DEFAULT '{}'::jsonb,
+  created_by VARCHAR(128),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS keyra_device_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  visitor_id VARCHAR(128) NOT NULL,
+  session_id VARCHAR(128) NOT NULL,
+  device_type VARCHAR(16) NOT NULL,
+  operating_system VARCHAR(64),
+  browser VARCHAR(128),
+  screen_width INT,
+  screen_height INT,
+  touch_capable BOOLEAN NOT NULL DEFAULT FALSE,
+  ip_address INET,
+  country_detected VARCHAR(2),
+  city_detected VARCHAR(128),
+  vpn_proxy_risk VARCHAR(16) DEFAULT 'unknown',
+  metadata_json JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_keyra_device_session ON keyra_device_records(session_id);
+
+CREATE TABLE IF NOT EXISTS keyra_visitor_analytics (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  visitor_id VARCHAR(128) NOT NULL,
+  session_id VARCHAR(128) NOT NULL,
+  ip_address INET,
+  country VARCHAR(2),
+  region VARCHAR(128),
+  city VARCHAR(128),
+  device_type VARCHAR(16),
+  operating_system VARCHAR(64),
+  browser VARCHAR(128),
+  referrer TEXT,
+  landing_page TEXT,
+  current_page TEXT,
+  utm_source VARCHAR(128),
+  utm_medium VARCHAR(128),
+  utm_campaign VARCHAR(128),
+  time_on_page INT DEFAULT 0,
+  scroll_depth INT DEFAULT 0,
+  metadata_json JSONB DEFAULT '{}'::jsonb,
+  keyra_object_id VARCHAR(128),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(visitor_id, session_id)
+);
+
+CREATE TABLE IF NOT EXISTS keyra_event_analytics (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_name VARCHAR(64) NOT NULL,
+  visitor_id VARCHAR(128) NOT NULL,
+  session_id VARCHAR(128) NOT NULL,
+  user_id UUID,
+  device_id UUID,
+  keyra_object_id VARCHAR(128) NOT NULL,
+  country_code VARCHAR(2) NOT NULL DEFAULT 'NA',
+  ip_address INET,
+  page_url TEXT,
+  metadata_json JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_keyra_events_name ON keyra_event_analytics(event_name, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS keyra_qr_pairing_sessions (
+  id UUID PRIMARY KEY,
+  keyra_object_id VARCHAR(128) NOT NULL,
+  session_id VARCHAR(128) NOT NULL,
+  desktop_pairing_token VARCHAR(128) NOT NULL UNIQUE,
+  nonce VARCHAR(128) NOT NULL,
+  callback_url TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  desktop_device_id UUID,
+  user_id UUID REFERENCES sn_users(id),
+  mobile_verified BOOLEAN NOT NULL DEFAULT FALSE,
+  scanned_at TIMESTAMPTZ,
+  paired_at TIMESTAMPTZ,
+  metadata_json JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_keyra_qr_token ON keyra_qr_pairing_sessions(desktop_pairing_token);
+
+CREATE TABLE IF NOT EXISTS keyra_otp_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id VARCHAR(128) NOT NULL,
+  mobile_hash VARCHAR(64) NOT NULL,
+  otp_code_hash VARCHAR(128),
+  expires_at TIMESTAMPTZ,
+  verified BOOLEAN NOT NULL DEFAULT FALSE,
+  keyra_object_id VARCHAR(128) NOT NULL,
+  device_id UUID,
+  metadata_json JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS keyra_consent_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES sn_users(id),
+  visitor_id VARCHAR(128),
+  session_id VARCHAR(128) NOT NULL,
+  consent_type VARCHAR(64) NOT NULL,
+  accepted BOOLEAN NOT NULL,
+  keyra_object_id VARCHAR(128) NOT NULL,
+  ip_address INET,
+  metadata_json JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS keyra_audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  action VARCHAR(128) NOT NULL,
+  keyra_object_id VARCHAR(128) NOT NULL,
+  actor_id UUID,
+  session_id VARCHAR(128),
+  metadata_json JSONB DEFAULT '{}'::jsonb,
+  ip_address INET,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE sn_users ADD COLUMN IF NOT EXISTS keyra_object_id VARCHAR(128);
+ALTER TABLE sn_users ADD COLUMN IF NOT EXISTS primary_device_id UUID;
+ALTER TABLE sn_users ADD COLUMN IF NOT EXISTS desktop_device_id UUID;
+
+-- ─── National Registry Architecture ───────────────────────────────────────────
+
+ALTER TABLE sn_admin_users ADD COLUMN IF NOT EXISTS must_reset_password BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE TABLE IF NOT EXISTS sn_national_registry (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  registry_id VARCHAR(32) NOT NULL UNIQUE,
+  entity_type VARCHAR(32) NOT NULL,
+  name VARCHAR(512) NOT NULL,
+  acronym VARCHAR(64),
+  description TEXT,
+  category VARCHAR(128),
+  status VARCHAR(32) NOT NULL DEFAULT 'active',
+  verification_status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  national_classification VARCHAR(64) DEFAULT 'sovereign',
+  province VARCHAR(128),
+  address TEXT,
+  gps_lat DECIMAL(10, 7),
+  gps_lng DECIMAL(10, 7),
+  website VARCHAR(512),
+  primary_email VARCHAR(255),
+  primary_phone VARCHAR(64),
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  tags TEXT[] DEFAULT '{}',
+  relationships JSONB DEFAULT '[]'::jsonb,
+  search_text TEXT,
+  created_by UUID REFERENCES sn_admin_users(id),
+  last_modified_by UUID REFERENCES sn_admin_users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sn_registry_entity ON sn_national_registry(entity_type, status);
+CREATE INDEX IF NOT EXISTS idx_sn_registry_search ON sn_national_registry USING gin(to_tsvector('english', coalesce(search_text, name)));
+
+CREATE TABLE IF NOT EXISTS sn_registry_imports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  filename VARCHAR(512),
+  format VARCHAR(16) NOT NULL,
+  entity_type VARCHAR(32),
+  records_total INT DEFAULT 0,
+  records_imported INT DEFAULT 0,
+  records_failed INT DEFAULT 0,
+  status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  imported_by UUID REFERENCES sn_admin_users(id),
+  error_log JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  completed_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS sn_registry_attachments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  registry_record_id UUID NOT NULL REFERENCES sn_national_registry(id) ON DELETE CASCADE,
+  filename VARCHAR(512) NOT NULL,
+  mime_type VARCHAR(128),
+  storage_key TEXT NOT NULL,
+  uploaded_by UUID REFERENCES sn_admin_users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS sn_registry_notes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  registry_record_id UUID NOT NULL REFERENCES sn_national_registry(id) ON DELETE CASCADE,
+  note TEXT NOT NULL,
+  created_by UUID REFERENCES sn_admin_users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

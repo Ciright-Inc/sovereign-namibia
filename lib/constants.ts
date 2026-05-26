@@ -77,3 +77,43 @@ export const DOCUMENT_TYPES = [
   "Residence Proof",
   "Telecom Account",
 ] as const;
+
+export const ACCOUNT_TYPES = [
+  { id: "individual", label: "Individual" },
+  { id: "business", label: "Business" },
+  { id: "government", label: "Government Ministry / Department" },
+  { id: "government_office", label: "Government Office / Regulator / Court" },
+  { id: "healthcare", label: "Healthcare Facility" },
+  { id: "financial", label: "Bank / Financial Institution" },
+  { id: "utility", label: "Utility / National Infrastructure Entity" },
+] as const;
+
+export type AccountTypeId = (typeof ACCOUNT_TYPES)[number]["id"];
+
+export const NAMIBIA_REGIONS = [
+  "Erongo",
+  "Hardap",
+  "Karas",
+  "Kavango East",
+  "Kavango West",
+  "Khomas",
+  "Kunene",
+  "Ohangwena",
+  "Omaheke",
+  "Omusati",
+  "Oshana",
+  "Oshikoto",
+  "Otjozondjupa",
+  "Zambezi",
+] as const;
+
+export const PENDING_VERIFICATION_STATUSES = [
+  "Pending",
+  "Approved",
+  "Rejected",
+  "More Information Required",
+  "Duplicate Review",
+  "Suspicious",
+] as const;
+
+export const REVIEW_STATUSES = ["Unreviewed", "In Review", "Completed"] as const;

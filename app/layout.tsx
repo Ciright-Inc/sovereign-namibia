@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
-import { SiteFooter, SiteHeader } from "@/components/layout/site-chrome";
+import { ConditionalChrome } from "@/components/layout/conditional-chrome";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -12,11 +12,11 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Sovereign Namibia — National Digital Identity",
+    default: "Sovereign Namibia Registry Network",
     template: "%s | Sovereign Namibia",
   },
   description:
-    "Find your citizen identity record. Claim and secure your account. Namibia's trusted sovereign digital identity platform.",
+    "Namibia's trusted digital registry infrastructure. Secure identity, institutional records, verified infrastructure, and sovereign digital trust.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://sovereignnamibia.com"),
 };
 
@@ -24,9 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={inter.variable}>
       <body className={`${inter.variable} flex min-h-screen flex-col antialiased`}>
-        <SiteHeader />
-        <main className="flex-1">{children}</main>
-        <SiteFooter />
+        <ConditionalChrome>{children}</ConditionalChrome>
         <Toaster position="top-center" richColors />
       </body>
     </html>

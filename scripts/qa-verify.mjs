@@ -96,13 +96,78 @@ async function main() {
     assert(`Subdomain ?subdomain=${sub}`, r.status === 200, `HTTP ${r.status}`);
   }
 
-  // Directory search — valid match
+  // Account access — Namibia geo check
+  const accessCheck = await req("/api/account/access-check");
+  assert("Account access check", accessCheck.status === 200 && accessCheck.body?.allowed === true);
+
+  // Account OTP + verified session (required before registry search)
+  const otpStart = await req("/api/account/request-otp", {
+    method: "POST",
+    body: JSON.stringify({
+      mobileNumber: "+264811234441",
+      termsAccepted: true,
+      privacyAccepted: true,
+    }),
+  });
+  assert("Account OTP request", otpStart.status === 200 && otpStart.body?.challengeId, otpStart.body?.challengeId);
+  const challengeId = otpStart.body.challengeId;
+  const accountOtp = otpStart.body.devOtp;
+  assert("Account OTP — dev code returned", !!accountOtp, accountOtp);
+
+  const otpVerify = await req("/api/account/verify-otp", {
+    method: "POST",
+    body: JSON.stringify({ challengeId, otp: accountOtp }),
+  });
+  assert("Account OTP verify", otpVerify.body?.success === true, otpVerify.body?.message);
+
+  const accountSetup = await req("/api/account/setup", {
+    method: "POST",
+    body: JSON.stringify({
+      accountType: "individual",
+      profileData: {
+        fullLegalName: "Johannes Chirongo",
+        dateOfBirth: "1985-03-15",
+        nationalId: "85031500123",
+        residentialAddress: "Windhoek",
+        region: "Khomas",
+        email: "johannes.chirongo@email.na",
+        mobileNumber: "+264811234441",
+      },
+      registryConsent: true,
+      termsAccepted: true,
+      privacyAccepted: true,
+    }),
+  });
+  assert("Account profile setup", accountSetup.status === 200 && accountSetup.body?.success === true);
+
+  // Directory search — blocked without session (fresh cookie reset not needed — same session)
+  const searchUnauth = await req("/api/directory/search", {
+    method: "POST",
+    headers: { Cookie: "" },
+    body: JSON.stringify({
+      fullLegalName: "Johannes Chirongo",
+      mobileNumber: "+264811234441",
+      dateOfBirth: "1985-03-15",
+      registryConsent: true,
+    }),
+  });
+  assert("Directory search — requires auth", searchUnauth.status === 401, `HTTP ${searchUnauth.status}`);
+
+  // Directory search — valid match (authenticated)
   const searchOk = await req("/api/directory/search", {
     method: "POST",
     body: JSON.stringify({
       fullLegalName: "Johannes Chirongo",
       mobileNumber: "+264811234441",
       dateOfBirth: "1985-03-15",
+      registryConsent: true,
+      accountType: "individual",
+      submittedProfile: {
+        fullLegalName: "Johannes Chirongo",
+        dateOfBirth: "1985-03-15",
+        nationalId: "85031500123",
+        mobileNumber: "+264811234441",
+      },
     }),
   });
   assert("Directory search — valid match", searchOk.status === 200, `HTTP ${searchOk.status}`);
@@ -129,14 +194,26 @@ async function main() {
       fullLegalName: "Nobody Here",
       mobileNumber: "+264800000000",
       dateOfBirth: "2000-01-01",
+      registryConsent: true,
+      accountType: "individual",
+      submittedProfile: {
+        fullLegalName: "Nobody Here",
+        mobileNumber: "+264800000000",
+        dateOfBirth: "2000-01-01",
+      },
     }),
   });
   assert("Directory search — no match", searchNone.body?.matches?.length === 0);
+  assert(
+    "Directory search — pending verification on no match",
+    !!searchNone.body?.pendingVerificationId || searchNone.body?.message?.includes("index"),
+    searchNone.body?.message
+  );
 
   // Directory search — invalid
   const searchBad = await req("/api/directory/search", {
     method: "POST",
-    body: JSON.stringify({ fullLegalName: "A" }),
+    body: JSON.stringify({ fullLegalName: "A", registryConsent: true }),
   });
   assert("Directory search — validation", searchBad.status === 400, `HTTP ${searchBad.status}`);
 
@@ -147,6 +224,13 @@ async function main() {
       fullLegalName: "Maria Nghidinwa",
       mobileNumber: "+264812345678",
       dateOfBirth: "1990-07-22",
+      registryConsent: true,
+      accountType: "individual",
+      submittedProfile: {
+        fullLegalName: "Maria Nghidinwa",
+        mobileNumber: "+264812345678",
+        dateOfBirth: "1990-07-22",
+      },
     }),
   });
   assert("Directory search — Maria", searchMaria.body?.matches?.length === 1);
@@ -239,16 +323,28 @@ async function main() {
   assert("Citizen register", register.status === 200 && register.body?.userId);
 
   // Admin (login before review so session cookie is sent)
+  const adminEmail = (() => {
+    try {
+      const host = new URL(BASE).hostname.replace(/^www\./, "");
+      if (host === "localhost" || host === "127.0.0.1" || host.endsWith(".local")) {
+        return "admin@sovereignnamibia.com";
+      }
+      return `admin@${host}`;
+    } catch {
+      return "admin@sovereignnamibia.com";
+    }
+  })();
+
   const adminLogin = await req("/api/admin/auth/login", {
     method: "POST",
-    body: JSON.stringify({ email: "admin@sovereignnamibia.com", password: "admin12345" }),
+    body: JSON.stringify({ email: adminEmail, password: "Namibia2026!" }),
   });
   assert("Admin login — DB credentials", adminLogin.body?.success === true, adminLogin.body?.role);
   assert("Admin session cookie set", cookieHeader.includes("sn_admin_session"));
 
   const adminBad = await req("/api/admin/auth/login", {
     method: "POST",
-    body: JSON.stringify({ email: "admin@sovereignnamibia.com", password: "wrongpassword" }),
+    body: JSON.stringify({ email: adminEmail, password: "wrongpassword" }),
   });
   assert("Admin login — rejects bad password", adminBad.status === 401);
 

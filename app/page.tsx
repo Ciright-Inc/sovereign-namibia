@@ -1,112 +1,134 @@
 import Link from "next/link";
 import { FadeIn, PageHero } from "@/components/ui/motion";
 import { Button } from "@/components/ui/button";
-import { getPublishedPage, getPublishedArticles, getEmergencyAlerts } from "@/lib/cms-service";
 
-export default async function HomePage() {
-  const [home, articles, alerts] = await Promise.all([
-    getPublishedPage("home"),
-    getPublishedArticles(3),
-    getEmergencyAlerts(),
-  ]);
+const registrySections = [
+  {
+    title: "Government Registry",
+    body: "Ministries, regulators, courts, municipalities, and state-owned enterprises in a unified sovereign directory.",
+    href: "/admin/government",
+  },
+  {
+    title: "Banking Infrastructure",
+    body: "Commercial banks, payment platforms, SWIFT codes, branches, and regulatory relationships.",
+    href: "/admin/banking",
+  },
+  {
+    title: "Healthcare Systems",
+    body: "Hospitals, clinics, laboratories, pharmacies, and healthcare authorities across all regions.",
+    href: "/admin/healthcare",
+  },
+  {
+    title: "Business Registry",
+    body: "National business records — registration, tax ID, ownership, licenses, and compliance status.",
+    href: "/admin/business",
+  },
+  {
+    title: "Citizen Services",
+    body: "Privacy-first citizen identity with verification, consent workflows, and encrypted sovereign records.",
+    href: "/find-account",
+  },
+  {
+    title: "Infrastructure Networks",
+    body: "NAMPOWER, telecom, ports, airports, utilities, and critical national infrastructure assets.",
+    href: "/admin/infrastructure",
+  },
+];
 
-  const hero = home?.content as {
-    hero?: string;
-    subtitle?: string;
-    notices?: { title: string; body: string; emergency?: boolean }[];
-  };
-
+export default function HomePage() {
   return (
     <>
-      {alerts.map((alert) => (
-        <div key={alert.id} className="sn-alert-emergency px-6 py-3 text-center text-sm">
-          <strong>{alert.title}</strong>
-        </div>
-      ))}
-
       <PageHero
-        eyebrow="National Digital Identity"
-        title={hero?.hero ?? "Your trusted national digital identity."}
-        subtitle={
-          hero?.subtitle ??
-          "Find your citizen identity record. Claim and secure your account. Access government services with confidence."
-        }
+        eyebrow="Sovereign Namibia Registry Network"
+        title="Namibia's Trusted Digital Registry Infrastructure"
+        subtitle="Secure identity, institutional records, verified infrastructure, and sovereign digital trust for the AI era."
       >
         <Link href="/find-account">
-          <Button size="lg">Find My Citizen Account</Button>
+          <Button size="lg">National Registry Search</Button>
         </Link>
-        <Link href="/register">
+        <Link href="/status">
           <Button variant="outline" size="lg">
-            Register as Citizen
+            Platform Status
           </Button>
         </Link>
       </PageHero>
 
-      <section className="px-6 py-20">
-        <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-3">
-          {[
-            {
-              title: "Find your record",
-              body: "Search the national citizen directory with privacy-safe, masked results.",
-            },
-            {
-              title: "Claim and secure",
-              body: "Verify your mobile number, complete identity verification, and activate your account.",
-            },
-            {
-              title: "Access services",
-              body: "Only verified citizens may access government digital services.",
-            },
-          ].map((item, i) => (
-            <FadeIn key={item.title} delay={i * 0.08}>
-              <div className="sn-card h-full p-8">
-                <h2 className="text-lg font-semibold text-[var(--sn-blue)]">{item.title}</h2>
-                <p className="mt-3 sn-prose text-sm">{item.body}</p>
-              </div>
-            </FadeIn>
-          ))}
+      <section className="border-y border-[rgba(12,45,74,0.08)] bg-[#0c1a2e] px-6 py-16 text-white">
+        <div className="mx-auto max-w-4xl text-center">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-white/50">Sovereign Search</p>
+          <h2 className="mt-4 text-2xl font-semibold md:text-3xl">Search the National Registry</h2>
+          <p className="mx-auto mt-4 max-w-xl text-sm text-white/60">
+            Find citizens, businesses, government entities, healthcare facilities, banks, and
+            infrastructure — indexed, normalized, and audit-logged.
+          </p>
+          <Link href="/find-account" className="mt-8 inline-block">
+            <Button variant="outline" className="border-white/30 text-white hover:bg-white/10">
+              Open Registry Search
+            </Button>
+          </Link>
         </div>
       </section>
 
-      {(hero?.notices?.length ?? 0) > 0 && (
-        <section className="border-y border-[rgba(12,45,74,0.08)] bg-white/30 px-6 py-16">
-          <div className="mx-auto max-w-4xl">
-            <p className="sn-eyebrow mb-6">National Notices</p>
-            {hero?.notices?.map((notice) => (
-              <div key={notice.title} className="sn-card mb-4 p-6">
-                <h3 className="font-medium text-[var(--sn-blue)]">{notice.title}</h3>
-                <p className="mt-2 sn-prose text-sm">{notice.body}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
       <section className="px-6 py-20">
-        <div className="mx-auto max-w-4xl">
-          <p className="sn-eyebrow mb-6">Latest News</p>
-          <div className="space-y-4">
-            {articles.map((article) => (
-              <Link
-                key={article.id}
-                href={`https://news.sovereignnamibia.com/${article.slug}`}
-                className="sn-card block p-6 transition hover:shadow-md"
-              >
-                <span className="sn-status-badge">{article.category ?? "News"}</span>
-                <h3 className="mt-3 text-lg font-medium text-[var(--sn-blue)]">{article.title}</h3>
-                {article.excerpt && <p className="mt-2 sn-prose text-sm">{article.excerpt}</p>}
-              </Link>
+        <div className="mx-auto max-w-6xl">
+          <p className="sn-eyebrow mb-8 text-center">National Registry Domains</p>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {registrySections.map((item, i) => (
+              <FadeIn key={item.title} delay={i * 0.06}>
+                <Link href={item.href} className="sn-card block h-full p-8 transition hover:shadow-md">
+                  <h2 className="text-lg font-semibold text-[var(--sn-blue)]">{item.title}</h2>
+                  <p className="mt-3 sn-prose text-sm">{item.body}</p>
+                </Link>
+              </FadeIn>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="border-t border-[rgba(12,45,74,0.08)] bg-white/40 px-6 py-20">
+        <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-2">
+          <FadeIn>
+            <p className="sn-eyebrow">API Ecosystem</p>
+            <h2 className="mt-4 text-2xl font-semibold text-[var(--sn-blue)]">
+              REST + GraphQL Sovereign Data APIs
+            </h2>
+            <p className="mt-4 sn-prose text-sm">
+              National registry data is API accessible with rate limiting, audit logging, and
+              role-based access control. Built for government integration and institutional trust.
+            </p>
+          </FadeIn>
+          <FadeIn delay={0.1}>
+            <p className="sn-eyebrow">Sovereign Trust Framework</p>
+            <h2 className="mt-4 text-2xl font-semibold text-[var(--sn-blue)]">
+              Authority, Permanence, and National-Scale Capability
+            </h2>
+            <p className="mt-4 sn-prose text-sm">
+              Encrypted records, immutable audit trails, verification pipelines, and privacy-first
+              citizen architecture — designed as critical national infrastructure, not a prototype.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/legal/privacy">
+                <Button variant="outline" size="sm">
+                  Privacy Policy
+                </Button>
+              </Link>
+              <Link href="/legal/rights">
+                <Button variant="outline" size="sm">
+                  Citizen Rights
+                </Button>
+              </Link>
+            </div>
+          </FadeIn>
         </div>
       </section>
 
       <section className="px-6 py-24 text-center">
         <FadeIn>
-          <p className="sn-eyebrow">Protected Online</p>
-          <h2 className="mt-4 sn-display text-3xl md:text-5xl">Be Protected Online.</h2>
+          <p className="sn-eyebrow">Protected Infrastructure</p>
+          <h2 className="mt-4 sn-display text-3xl md:text-5xl">Sovereign Digital Trust</h2>
           <p className="mx-auto mt-6 max-w-xl sn-prose">
-            Your documents are encrypted during upload. Your identity is verified with care.
+            A national operating system for identity, institutions, and infrastructure — built for
+            the AI era with telecom-grade security architecture.
           </p>
         </FadeIn>
       </section>

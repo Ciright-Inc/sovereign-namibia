@@ -7,8 +7,8 @@ import {
   SESSION_HOURS,
 } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
-import { getClientInfo } from "@/lib/rate-limit";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { getClientInfo, checkRateLimit } from "@/lib/rate-limit";
+import { KeyraAnalytics } from "@/services/keyra/keyraAnalytics";
 
 const schema = z.object({
   email: z.string().email(),
@@ -29,8 +29,14 @@ export async function POST(request: NextRequest) {
     let admin = await authenticateAdmin(email, password);
 
     if (!admin && process.env.NODE_ENV !== "production") {
-      if (email === "admin@sovereignnamibia.com" && password === "admin12345") {
-        admin = { id: "demo-admin", fullName: "Demo Admin", role: "Super Admin" };
+      const { getDefaultAdminEmail } = await import("@/lib/admin-password");
+      if (email === getDefaultAdminEmail() && password === "Namibia2026!") {
+        admin = {
+          id: "demo-admin",
+          fullName: "Demo Admin",
+          role: "Super Admin",
+          mustResetPassword: false,
+        };
       }
     }
 
@@ -42,6 +48,7 @@ export async function POST(request: NextRequest) {
         ipAddress: ip ?? undefined,
         userAgent: userAgent ?? undefined,
       });
+      await KeyraAnalytics.captureEvent("admin_login_failed", { ip_address: ip ?? undefined, metadata: { email } });
       return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
     }
 
@@ -51,7 +58,11 @@ export async function POST(request: NextRequest) {
       role: admin.role,
     });
 
-    const response = NextResponse.json({ success: true, role: admin.role });
+    const response = NextResponse.json({
+      success: true,
+      role: admin.role,
+      mustResetPassword: admin.mustResetPassword ?? false,
+    });
     response.cookies.set(ADMIN_SESSION_COOKIE, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -66,6 +77,11 @@ export async function POST(request: NextRequest) {
       action: "admin.login",
       ipAddress: ip ?? undefined,
       userAgent: userAgent ?? undefined,
+    });
+
+    await KeyraAnalytics.captureEvent("admin_login_success", {
+      user_id: admin.id,
+      ip_address: ip ?? undefined,
     });
 
     return response;

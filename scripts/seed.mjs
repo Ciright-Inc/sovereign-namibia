@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import pg from "pg";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 
 const DEMO_RECORDS = [
   {
@@ -47,10 +48,83 @@ function encrypt(plaintext) {
 }
 
 function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString("hex");
-  const hash = crypto.scryptSync(password, salt, 64).toString("hex");
-  return `${salt}:${hash}`;
+  return bcrypt.hashSync(password, 12);
 }
+
+function getAdminEmail() {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://sovereignnamibia.com";
+  try {
+    const host = new URL(appUrl).hostname.replace(/^www\./, "");
+    if (host === "localhost" || host === "127.0.0.1" || host.endsWith(".local")) {
+      return "admin@sovereignnamibia.com";
+    }
+    return `admin@${host}`;
+  } catch {
+    return "admin@sovereignnamibia.com";
+  }
+}
+
+const REGISTRY_SEED = [
+  {
+    registry_id: "REG-NA-GOV-001",
+    entity_type: "government",
+    name: "Ministry of Finance and Public Enterprises",
+    acronym: "MOFPE",
+    description: "Central ministry responsible for fiscal policy and public enterprise oversight.",
+    category: "Ministry",
+    province: "Khomas",
+    website: "https://www.mof.gov.na",
+    primary_email: "info@mof.gov.na",
+    primary_phone: "+26461209511",
+  },
+  {
+    registry_id: "REG-NA-BNK-001",
+    entity_type: "banking",
+    name: "Bank Windhoek",
+    acronym: "BWH",
+    description: "Leading commercial bank in Namibia.",
+    category: "Commercial Bank",
+    province: "Khomas",
+    website: "https://www.bankwindhoek.com.na",
+    primary_email: "info@bankwindhoek.com.na",
+    primary_phone: "+26461299501",
+  },
+  {
+    registry_id: "REG-NA-HLT-001",
+    entity_type: "healthcare",
+    name: "Windhoek Central Hospital",
+    acronym: "WCH",
+    description: "National referral hospital serving Khomas region.",
+    category: "Hospital",
+    province: "Khomas",
+    primary_email: "wch@mhss.gov.na",
+    primary_phone: "+264612033000",
+  },
+  {
+    registry_id: "REG-NA-INF-001",
+    entity_type: "infrastructure",
+    name: "NamPower",
+    acronym: "NAMPOWER",
+    description: "National power utility of Namibia.",
+    category: "Energy Infrastructure",
+    province: "Khomas",
+    website: "https://www.nampower.com.na",
+    primary_email: "info@nampower.com.na",
+    primary_phone: "+264612041111",
+  },
+  {
+    registry_id: "REG-NA-BIZ-001",
+    entity_type: "business",
+    name: "Namibia Breweries Limited",
+    acronym: "NBL",
+    description: "Leading beverage manufacturer in Namibia.",
+    category: "Manufacturing",
+    province: "Khomas",
+    website: "https://www.nbl.com.na",
+    primary_email: "info@nbl.com.na",
+    primary_phone: "+26461200500",
+  },
+];
 
 function getPgConfig(connectionString) {
   const needsSsl =
@@ -77,6 +151,9 @@ async function main() {
   try {
     const roles = [
       "Super Admin",
+      "Registry Admin",
+      "Data Entry Operator",
+      "Read Only Analyst",
       "KYC Reviewer",
       "CMS Editor",
       "News Moderator",
@@ -97,11 +174,41 @@ async function main() {
     const roleId = adminRole.rows[0]?.id;
 
     if (roleId) {
+      const adminEmail = getAdminEmail();
       await client.query(
-        `INSERT INTO sn_admin_users (email, password_hash, full_name, role_id)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT (email) DO NOTHING`,
-        ["admin@sovereignnamibia.com", hashPassword("admin12345"), "System Administrator", roleId]
+        `INSERT INTO sn_admin_users (email, password_hash, full_name, role_id, must_reset_password)
+         VALUES ($1, $2, $3, $4, TRUE)
+         ON CONFLICT (email) DO UPDATE SET
+           password_hash = EXCLUDED.password_hash,
+           must_reset_password = TRUE`,
+        [adminEmail, hashPassword("Namibia2026!"), "System Administrator", roleId]
+      );
+      console.log(`Admin seeded: ${adminEmail} (must reset password on first login)`);
+    }
+
+    for (const record of REGISTRY_SEED) {
+      const searchText = [record.name, record.acronym, record.description, record.category, record.province]
+        .filter(Boolean)
+        .join(" ");
+      await client.query(
+        `INSERT INTO sn_national_registry
+          (registry_id, entity_type, name, acronym, description, category, status, verification_status,
+           province, website, primary_email, primary_phone, metadata, search_text)
+         VALUES ($1,$2,$3,$4,$5,$6,'active','verified',$7,$8,$9,$10,'{}'::jsonb,$11)
+         ON CONFLICT (registry_id) DO NOTHING`,
+        [
+          record.registry_id,
+          record.entity_type,
+          record.name,
+          record.acronym,
+          record.description,
+          record.category,
+          record.province,
+          record.website ?? null,
+          record.primary_email ?? null,
+          record.primary_phone ?? null,
+          searchText,
+        ]
       );
     }
 
@@ -136,9 +243,9 @@ async function main() {
         "home",
         "Sovereign Digital Identity for Namibia",
         JSON.stringify({
-          hero: "Your trusted national digital identity.",
+          hero: "Namibia's Trusted Digital Registry Infrastructure",
           subtitle:
-            "Find your citizen identity record. Claim and secure your account. Access government services with confidence.",
+            "Secure identity, institutional records, verified infrastructure, and sovereign digital trust for the AI era.",
           notices: [
             {
               title: "National Digital Identity Programme",

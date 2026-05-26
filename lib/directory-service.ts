@@ -73,7 +73,7 @@ function demoSearch(input: DirectorySearchInput): DirectoryMatchResult[] {
 
 export async function searchDirectory(
   input: DirectorySearchInput,
-  auditContext?: { ip?: string | null; userAgent?: string | null }
+  auditContext?: { ip?: string | null; userAgent?: string | null; actorId?: string }
 ): Promise<{ matches: DirectoryMatchResult[]; message: string }> {
   const dbReady = await isDatabaseReady();
 
@@ -128,6 +128,7 @@ export async function searchDirectory(
 
   await writeAuditLog({
     actorType: "citizen",
+    actorId: auditContext?.actorId,
     action: "directory.search",
     resourceType: "directory",
     metadata: { matchCount: matches.length },
