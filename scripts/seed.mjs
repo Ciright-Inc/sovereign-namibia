@@ -2,6 +2,12 @@
 import pg from "pg";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const REGISTRY_SEED = JSON.parse(readFileSync(join(__dirname, "../data/registry-seed.json"), "utf8"));
 
 const DEMO_RECORDS = [
   {
@@ -63,68 +69,6 @@ function getAdminEmail() {
     return "admin@sovereignnamibia.com";
   }
 }
-
-const REGISTRY_SEED = [
-  {
-    registry_id: "REG-NA-GOV-001",
-    entity_type: "government",
-    name: "Ministry of Finance and Public Enterprises",
-    acronym: "MOFPE",
-    description: "Central ministry responsible for fiscal policy and public enterprise oversight.",
-    category: "Ministry",
-    province: "Khomas",
-    website: "https://www.mof.gov.na",
-    primary_email: "info@mof.gov.na",
-    primary_phone: "+26461209511",
-  },
-  {
-    registry_id: "REG-NA-BNK-001",
-    entity_type: "banking",
-    name: "Bank Windhoek",
-    acronym: "BWH",
-    description: "Leading commercial bank in Namibia.",
-    category: "Commercial Bank",
-    province: "Khomas",
-    website: "https://www.bankwindhoek.com.na",
-    primary_email: "info@bankwindhoek.com.na",
-    primary_phone: "+26461299501",
-  },
-  {
-    registry_id: "REG-NA-HLT-001",
-    entity_type: "healthcare",
-    name: "Windhoek Central Hospital",
-    acronym: "WCH",
-    description: "National referral hospital serving Khomas region.",
-    category: "Hospital",
-    province: "Khomas",
-    primary_email: "wch@mhss.gov.na",
-    primary_phone: "+264612033000",
-  },
-  {
-    registry_id: "REG-NA-INF-001",
-    entity_type: "infrastructure",
-    name: "NamPower",
-    acronym: "NAMPOWER",
-    description: "National power utility of Namibia.",
-    category: "Energy Infrastructure",
-    province: "Khomas",
-    website: "https://www.nampower.com.na",
-    primary_email: "info@nampower.com.na",
-    primary_phone: "+264612041111",
-  },
-  {
-    registry_id: "REG-NA-BIZ-001",
-    entity_type: "business",
-    name: "Namibia Breweries Limited",
-    acronym: "NBL",
-    description: "Leading beverage manufacturer in Namibia.",
-    category: "Manufacturing",
-    province: "Khomas",
-    website: "https://www.nbl.com.na",
-    primary_email: "info@nbl.com.na",
-    primary_phone: "+26461200500",
-  },
-];
 
 function getPgConfig(connectionString) {
   const needsSsl =
@@ -214,26 +158,31 @@ async function main() {
     }
 
     for (const record of REGISTRY_SEED) {
-      const searchText = [record.name, record.acronym, record.description, record.category, record.province]
+      const searchText = [record.name, record.acronym, record.description, record.category, record.province, JSON.stringify(record.metadata ?? {})]
         .filter(Boolean)
         .join(" ");
       await client.query(
         `INSERT INTO sn_national_registry
           (registry_id, entity_type, name, acronym, description, category, status, verification_status,
-           province, website, primary_email, primary_phone, metadata, search_text)
-         VALUES ($1,$2,$3,$4,$5,$6,'active','verified',$7,$8,$9,$10,'{}'::jsonb,$11)
+           province, address, gps_lat, gps_lng, website, primary_email, primary_phone, metadata, tags, search_text)
+         VALUES ($1,$2,$3,$4,$5,$6,'active','verified',$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
          ON CONFLICT (registry_id) DO NOTHING`,
         [
           record.registry_id,
           record.entity_type,
           record.name,
-          record.acronym,
-          record.description,
-          record.category,
-          record.province,
+          record.acronym ?? null,
+          record.description ?? null,
+          record.category ?? null,
+          record.province ?? null,
+          record.address ?? null,
+          record.gps_lat ?? null,
+          record.gps_lng ?? null,
           record.website ?? null,
           record.primary_email ?? null,
           record.primary_phone ?? null,
+          JSON.stringify(record.metadata ?? {}),
+          record.tags ?? [],
           searchText,
         ]
       );

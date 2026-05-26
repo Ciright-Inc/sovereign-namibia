@@ -4,11 +4,18 @@ export default async function AdminApiPage() {
   await requireAdmin("api.manage");
 
   const endpoints = [
-    { method: "GET", path: "/api/admin/registry/search?q=", desc: "Global registry search" },
+    { method: "POST", path: "/api/graphql", desc: "GraphQL — registrySearch, registryRecord, registryStats" },
+    { method: "GET", path: "/api/admin/registry/search?q=&entityType=&mode=fuzzy", desc: "Advanced global search (fuzzy, phonetic, AI, map)" },
     { method: "GET", path: "/api/admin/registry?entityType=", desc: "List registry by type" },
     { method: "POST", path: "/api/admin/registry", desc: "Create registry record" },
-    { method: "POST", path: "/api/admin/auth/login", desc: "Admin authentication" },
-    { method: "GET", path: "/api/directory/search", desc: "Citizen directory (session-gated)" },
+    { method: "GET/PATCH/DELETE", path: "/api/admin/registry/[id]", desc: "Read, update, delete record" },
+    { method: "POST", path: "/api/admin/registry/[id]/notes", desc: "Add record note" },
+    { method: "POST", path: "/api/admin/registry/[id]/attachments", desc: "Add attachment reference" },
+    { method: "POST", path: "/api/admin/registry/import", desc: "Bulk import CSV/JSON/XML" },
+    { method: "DELETE", path: "/api/admin/registry/import?id=", desc: "Rollback import" },
+    { method: "POST", path: "/api/admin/auth/login", desc: "Admin authentication (JWT)" },
+    { method: "POST", path: "/api/admin/auth/forgot-password", desc: "Password reset request" },
+    { method: "GET", path: "/api/directory/search", desc: "Citizen directory (session-gated, masked)" },
     { method: "GET", path: "/api/status", desc: "Platform status" },
   ];
 
@@ -18,8 +25,14 @@ export default async function AdminApiPage() {
         <p className="text-[10px] uppercase tracking-[0.2em] text-[#6b7280]">Sovereign API</p>
         <h1 className="mt-2 text-2xl font-semibold text-white">API Management</h1>
         <p className="mt-2 text-sm text-[#9ca3af]">
-          REST endpoints for national registry access. GraphQL gateway planned. Rate limiting and throttling enabled.
+          REST + GraphQL endpoints for national registry access. Rate limiting and throttling enabled on all write and search routes.
         </p>
+      </div>
+
+      <div className="rounded-lg border border-white/10 bg-[#0f1115] p-6">
+        <h2 className="font-medium text-white">GraphQL Example</h2>
+        <pre className="mt-3 overflow-x-auto rounded bg-black/40 p-4 text-xs text-emerald-400/90">{`POST /api/graphql
+{ "query": "{ registrySearch(q: \\"Nampower\\") { registryId name entityType province } }" }`}</pre>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-white/10 bg-[#0f1115]">

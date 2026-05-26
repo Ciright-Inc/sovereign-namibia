@@ -19,6 +19,8 @@ export const PERMISSIONS = {
   "access.manage": ["Super Admin"],
   "api.manage": ["Super Admin", "Registry Admin"],
   "settings.manage": ["Super Admin"],
+  "citizen.read": ["Super Admin", "Registry Admin", "Data Entry Operator", "Read Only Analyst", "KYC Reviewer", "Security Officer"],
+  "citizen.read_sensitive": ["Super Admin", "Security Officer", "KYC Reviewer"],
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;

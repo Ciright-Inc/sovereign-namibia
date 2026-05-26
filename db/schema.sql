@@ -610,3 +610,38 @@ CREATE TABLE IF NOT EXISTS sn_registry_notes (
   created_by UUID REFERENCES sn_admin_users(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Search indexes (pg_trgm extension applied optionally in migrate.mjs)
+CREATE INDEX IF NOT EXISTS idx_sn_registry_name_lower ON sn_national_registry(lower(name));
+
+CREATE TABLE IF NOT EXISTS sn_registry_audit_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  registry_record_id UUID NOT NULL REFERENCES sn_national_registry(id) ON DELETE CASCADE,
+  action VARCHAR(64) NOT NULL,
+  actor_id UUID REFERENCES sn_admin_users(id),
+  changes JSONB DEFAULT '{}'::jsonb,
+  ip_address INET,
+  geo_country VARCHAR(2),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sn_registry_audit_record ON sn_registry_audit_history(registry_record_id, created_at DESC);
+
+ALTER TABLE sn_registry_imports ADD COLUMN IF NOT EXISTS field_mapping JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE sn_registry_imports ADD COLUMN IF NOT EXISTS rollback_snapshot JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE sn_registry_imports ADD COLUMN IF NOT EXISTS rolled_back_at TIMESTAMPTZ;
+
+CREATE TABLE IF NOT EXISTS sn_admin_password_resets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_user_id UUID NOT NULL REFERENCES sn_admin_users(id) ON DELETE CASCADE,
+  token_hash VARCHAR(128) NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Default RBAC permissions on roles
+UPDATE sn_roles SET permissions = '["registry.read","registry.write","registry.delete","search.global","import.data","audit.read","access.manage","api.manage","settings.manage","citizen.read","citizen.read_sensitive"]'::jsonb WHERE name = 'Super Admin';
+UPDATE sn_roles SET permissions = '["registry.read","registry.write","search.global","import.data","audit.read","api.manage","citizen.read"]'::jsonb WHERE name = 'Registry Admin';
+UPDATE sn_roles SET permissions = '["registry.read","registry.write","search.global","import.data","citizen.read"]'::jsonb WHERE name = 'Data Entry Operator';
+UPDATE sn_roles SET permissions = '["registry.read","search.global","audit.read","citizen.read"]'::jsonb WHERE name = 'Read Only Analyst';

@@ -54,6 +54,13 @@ async function main() {
 
   try {
     await client.query(sql);
+    try {
+      await client.query("CREATE EXTENSION IF NOT EXISTS pg_trgm");
+      await client.query("CREATE INDEX IF NOT EXISTS idx_sn_registry_name_trgm ON sn_national_registry USING gin (name gin_trgm_ops)");
+      console.log("[migrate] pg_trgm extension enabled for fuzzy search.");
+    } catch {
+      console.log("[migrate] pg_trgm unavailable — fuzzy search will use ILIKE fallback.");
+    }
     console.log("[migrate] Migration complete.");
   } finally {
     await client.end();

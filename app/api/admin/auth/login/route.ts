@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
       action: "admin.login",
       ipAddress: ip ?? undefined,
       userAgent: userAgent ?? undefined,
+      metadata: { geoCountry: request.headers.get("cf-ipcountry") ?? request.headers.get("x-vercel-ip-country") },
     });
 
     await KeyraAnalytics.captureEvent("admin_login_success", {

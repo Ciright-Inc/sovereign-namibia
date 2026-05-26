@@ -90,7 +90,13 @@ export function AdminLoginModal({ open, onClose }: AdminLoginModalProps) {
             <button
               type="button"
               className="text-sm text-[#9ca3af] transition hover:text-white"
-              onClick={() => toast.info("Contact your Super Admin to reset credentials.")}
+              onClick={async () => {
+                const email = (document.querySelector('input[name="email"]') as HTMLInputElement)?.value;
+                if (!email) { toast.error("Enter your email first"); return; }
+                const res = await fetch("/api/admin/auth/forgot-password", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+                const data = await res.json();
+                toast.success(data.message ?? "Reset request submitted");
+              }}
             >
               Forgot Password
             </button>
