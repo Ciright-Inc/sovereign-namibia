@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { SUBDOMAIN_LABELS } from "@/lib/subdomain";
+import { SiteFooter } from "@/components/layout/site-footer";
+
+export { SiteFooter };
 
 const navLinks = [
   { href: "/find-account", label: "Find My Account" },
@@ -44,29 +47,5 @@ export function SiteHeader({ subdomain = "main" }: { subdomain?: string }) {
         </nav>
       </div>
     </header>
-  );
-}
-
-export function SiteFooter() {
-  return (
-    <footer className="mt-auto border-t border-[rgba(12,45,74,0.08)] bg-white/40">
-      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-12 md:flex-row md:justify-between">
-        <div>
-          <p className="sn-eyebrow">Sovereign Namibia</p>
-          <p className="mt-2 max-w-sm sn-prose text-sm">
-            Your information is protected. Official national digital identity infrastructure.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm text-[rgba(12,45,74,0.6)]">
-          <Link href="/legal/privacy">Privacy Policy</Link>
-          <Link href="/legal/terms">Terms of Use</Link>
-          <Link href="/legal/rights">Citizen Rights</Link>
-          <a href="https://status.sovereignnamibia.com">System Status</a>
-        </div>
-      </div>
-      <div className="border-t border-[rgba(12,45,74,0.06)] px-6 py-4 text-center text-xs text-[rgba(12,45,74,0.45)]">
-        © {new Date().getFullYear()} Sovereign Namibia. All rights reserved.
-      </div>
-    </footer>
   );
 }
