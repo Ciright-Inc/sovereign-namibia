@@ -39,5 +39,7 @@ export const FOOTER_STATUS_LINK: FooterLink = {
 export const FOOTER_PLATFORM_LINKS: FooterLink[] = [
   { href: "/find-account", label: "Find My Account" },
   { href: "/register", label: "Register" },
+  { href: "/map", label: "National Map", description: "Interactive infrastructure + opportunity map" },
+  { href: "/trust", label: "Trust Dashboard", description: "Transparency metrics and citizen rights" },
   { href: "https://support.sovereignnamibia.com", label: "Support", external: true },
 ];

@@ -20,6 +20,8 @@ export default function HomePage() {
         subtitle="Secure identity, institutional records, verified infrastructure, and sovereign digital trust for the AI era."
       >
         <Link href="/find-account"><Button size="lg">National Registry Search</Button></Link>
+        <Link href="/map"><Button variant="outline" size="lg">National Map</Button></Link>
+        <Link href="/trust"><Button variant="outline" size="lg">Trust Dashboard</Button></Link>
         <Link href="/status"><Button variant="outline" size="lg">Platform Status</Button></Link>
       </PageHero>
 

@@ -11,6 +11,8 @@ export { SiteFooter };
 const navLinks = [
   { href: "/find-account", label: "Create Account" },
   { href: "/find-account?signin=1", label: "Find My Account" },
+  { href: "/map", label: "National Map" },
+  { href: "/trust", label: "Trust Dashboard" },
   { href: "https://news.sovereignnamibia.com", label: "News", external: true },
   { href: "https://services.sovereignnamibia.com", label: "Services", external: true },
   { href: "https://support.sovereignnamibia.com", label: "Support", external: true },
