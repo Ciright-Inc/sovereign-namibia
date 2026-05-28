@@ -18,7 +18,7 @@ export default async function AdminSettingsPage() {
           { label: "Session Duration", value: "8 hours (JWT)" },
           { label: "Password Hashing", value: "bcrypt (12 rounds)" },
           { label: "MFA", value: "Architecture ready (not yet enforced)" },
-          { label: "Search Index", value: "PostgreSQL full-text + pg_trgm fuzzy + soundex phonetic" },
+          { label: "Search Index", value: "PostgreSQL full-text + pg_trgm fuzzy + similarity-based phonetic" },
           { label: "Audit Logging", value: "Enabled — immutable hashes" },
         ].map((item) => (
           <div

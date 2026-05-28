@@ -645,3 +645,81 @@ UPDATE sn_roles SET permissions = '["registry.read","registry.write","registry.d
 UPDATE sn_roles SET permissions = '["registry.read","registry.write","search.global","import.data","audit.read","api.manage","citizen.read"]'::jsonb WHERE name = 'Registry Admin';
 UPDATE sn_roles SET permissions = '["registry.read","registry.write","search.global","import.data","citizen.read"]'::jsonb WHERE name = 'Data Entry Operator';
 UPDATE sn_roles SET permissions = '["registry.read","search.global","audit.read","citizen.read"]'::jsonb WHERE name = 'Read Only Analyst';
+
+-- ─── Map Pins (Infrastructure + Opportunity Visibility Layer) ────────────────
+
+CREATE TABLE IF NOT EXISTS sn_map_pins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  pin_name VARCHAR(512) NOT NULL,
+  pin_type VARCHAR(64) NOT NULL,
+  latitude DECIMAL(10, 7) NOT NULL,
+  longitude DECIMAL(10, 7) NOT NULL,
+  region VARCHAR(128),
+  description TEXT,
+  verification_status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  verification_authority VARCHAR(255),
+  verification_date TIMESTAMPTZ,
+  trust_rating INT NOT NULL DEFAULT 50,
+  public_visibility_rules JSONB NOT NULL DEFAULT '{}'::jsonb,
+  priority INT NOT NULL DEFAULT 50,
+  source_attribution TEXT,
+  transparency_score INT NOT NULL DEFAULT 50,
+  community_feedback_status VARCHAR(32) NOT NULL DEFAULT 'open',
+  correction_request_status VARCHAR(32) NOT NULL DEFAULT 'none',
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  is_archived BOOLEAN NOT NULL DEFAULT FALSE,
+  created_by UUID REFERENCES sn_admin_users(id),
+  last_modified_by UUID REFERENCES sn_admin_users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sn_map_pins_type ON sn_map_pins(pin_type, verification_status, is_active);
+CREATE INDEX IF NOT EXISTS idx_sn_map_pins_region ON sn_map_pins(region);
+CREATE INDEX IF NOT EXISTS idx_sn_map_pins_geo ON sn_map_pins(latitude, longitude);
+
+CREATE TABLE IF NOT EXISTS sn_map_pin_attachments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  pin_id UUID NOT NULL REFERENCES sn_map_pins(id) ON DELETE CASCADE,
+  filename VARCHAR(512) NOT NULL,
+  mime_type VARCHAR(128),
+  storage_key TEXT NOT NULL,
+  uploaded_by UUID REFERENCES sn_admin_users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS sn_map_pin_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  pin_id UUID NOT NULL REFERENCES sn_map_pins(id) ON DELETE CASCADE,
+  action VARCHAR(64) NOT NULL,
+  actor_id UUID REFERENCES sn_admin_users(id),
+  changes JSONB DEFAULT '{}'::jsonb,
+  ip_address INET,
+  geo_country VARCHAR(2),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sn_map_pin_audit_pin ON sn_map_pin_audit(pin_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS sn_map_pin_feedback (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  pin_id UUID NOT NULL REFERENCES sn_map_pins(id) ON DELETE CASCADE,
+  feedback_type VARCHAR(64) NOT NULL,
+  message TEXT NOT NULL,
+  contact_email VARCHAR(255),
+  status VARCHAR(32) NOT NULL DEFAULT 'submitted',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS sn_map_pin_corrections (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  pin_id UUID REFERENCES sn_map_pins(id) ON DELETE SET NULL,
+  request_type VARCHAR(64) NOT NULL,
+  proposed_changes JSONB DEFAULT '{}'::jsonb,
+  evidence_text TEXT,
+  status VARCHAR(32) NOT NULL DEFAULT 'submitted',
+  reviewed_by UUID REFERENCES sn_admin_users(id),
+  review_notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  reviewed_at TIMESTAMPTZ
+);

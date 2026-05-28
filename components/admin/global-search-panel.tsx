@@ -65,7 +65,7 @@ export function GlobalSearchPanel() {
           <select value={mode} onChange={(e) => setMode(e.target.value)} className="rounded-lg border border-white/15 bg-[#050608] px-3 py-2 text-sm text-white">
             <option value="standard">Standard</option>
             <option value="fuzzy">Fuzzy (trigram)</option>
-            <option value="phonetic">Phonetic (soundex)</option>
+            <option value="phonetic">Phonetic (similarity)</option>
             <option value="ai">AI-assisted</option>
           </select>
           <button type="submit" disabled={loading} className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50">

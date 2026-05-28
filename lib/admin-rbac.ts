@@ -21,6 +21,9 @@ export const PERMISSIONS = {
   "settings.manage": ["Super Admin"],
   "citizen.read": ["Super Admin", "Registry Admin", "Data Entry Operator", "Read Only Analyst", "KYC Reviewer", "Security Officer"],
   "citizen.read_sensitive": ["Super Admin", "Security Officer", "KYC Reviewer"],
+  "map_pins.read": ["Super Admin", "Registry Admin", "Data Entry Operator", "Read Only Analyst", "Security Officer"],
+  "map_pins.write": ["Super Admin", "Registry Admin", "Data Entry Operator"],
+  "map_pins.verify": ["Super Admin", "Registry Admin", "Security Officer"],
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -50,6 +53,7 @@ export const ADMIN_NAV = [
   { href: "/admin/infrastructure", label: "Infrastructure Registry", permission: "registry.read" as Permission },
   { href: "/admin/business", label: "Business Registry", permission: "registry.read" as Permission },
   { href: "/admin/citizens", label: "Citizen Registry", permission: "registry.read" as Permission },
+  { href: "/admin/map-pins", label: "Map Pins Administration", permission: "map_pins.read" as Permission },
   { href: "/admin/search", label: "Search Engine", permission: "search.global" as Permission },
   { href: "/admin/imports", label: "Data Imports", permission: "import.data" as Permission },
   { href: "/admin/audit", label: "Audit Logs", permission: "audit.read" as Permission },
